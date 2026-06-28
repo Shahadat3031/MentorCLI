@@ -9,7 +9,10 @@ export interface ExecutorProvider {
 export function getExecutorInfo(): Record<string, ProviderInfo> {
   return {
     opencode: { name: "OpenCode", description: "OpenCode AI coding agent" },
-    ollama: { name: "Ollama", description: "Local Ollama models (qwen2.5-coder, deepseek-coder, codellama)" },
+    openrouter: { name: "OpenRouter", description: "OpenRouter API (GPT-4o, Claude, etc.)" },
+    groq: { name: "Groq", description: "Groq cloud inference — free tier (llama-3.3-70b)" },
+    gemini: { name: "Gemini", description: "Google Gemini Flash — free tier" },
+    ollama: { name: "Ollama", description: "Local Ollama models — completely free" },
     shell: { name: "Shell", description: "Shell command executor" },
     mock: { name: "Mock", description: "Mock executor for testing" },
   }

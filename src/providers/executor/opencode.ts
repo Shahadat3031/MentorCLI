@@ -5,11 +5,9 @@ import { Task, ExecutionResult } from "../../types/index.js"
 export class OpenCodeExecutor implements ExecutorProvider {
   readonly name = "opencode"
   private opencodePath: string
-  private model: string
 
-  constructor(opencodePath = "opencode", model = "default") {
+  constructor(opencodePath = "opencode") {
     this.opencodePath = opencodePath
-    this.model = model
   }
 
   async execute(task: Task, prd: string, projectType: string, projectFiles: string): Promise<ExecutionResult> {
@@ -55,9 +53,8 @@ Fix the issues. Return your response as JSON:
 
   private runOpenCode(prompt: string): Promise<ExecutionResult> {
     return new Promise((resolve, reject) => {
-      const child = spawn(this.opencodePath, ["--prompt", prompt], {
+      const child = spawn(this.opencodePath, ["run", prompt], {
         stdio: ["pipe", "pipe", "pipe"],
-        shell: true,
       })
 
       let stdout = ""

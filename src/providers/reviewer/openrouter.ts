@@ -44,6 +44,12 @@ If passed is false, list issues to fix.`,
     })
 
     if (!response.ok) {
+      if (response.status === 402) {
+        throw new Error("OpenRouter: insufficient credits. Add credits at https://openrouter.ai/credits or switch provider with: mentor config")
+      }
+      if (response.status === 401) {
+        throw new Error("OpenRouter: invalid API key. Check OPENROUTER_API_KEY in ~/.mentor/.env")
+      }
       throw new Error(`OpenRouter API error: ${response.status} ${response.statusText}`)
     }
 

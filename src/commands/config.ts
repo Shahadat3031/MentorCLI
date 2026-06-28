@@ -6,6 +6,32 @@ import { getExecutorInfo } from "../providers/executor/index.js"
 import { getReviewerInfo } from "../providers/reviewer/index.js"
 
 export async function configCommand(): Promise<void> {
+  const args = process.argv.slice(process.argv.indexOf("config") + 1)
+  if (args[0] === "set" && args[1] && args[2]) {
+    const key = args[1]
+    const value = args[2]
+    const validKeys = ["planner", "executor", "reviewer"]
+
+    if (!validKeys.includes(key)) {
+      console.error(chalk.red(`Invalid key: ${key}. Valid keys: ${validKeys.join(", ")}`))
+      process.exit(1)
+    }
+
+    const infoMap = key === "planner" ? getPlannerInfo() : key === "executor" ? getExecutorInfo() : getReviewerInfo()
+
+    if (!infoMap[value]) {
+      const valid = Object.keys(infoMap).join(", ")
+      console.error(chalk.red(`Invalid ${key}: ${value}. Valid options: ${valid}`))
+      process.exit(1)
+    }
+
+    const current = await loadGlobalConfig()
+    current[key as keyof typeof current] = value as any
+    await saveGlobalConfig(current)
+    console.log(chalk.green(`\n✓ ${key} set to ${value}`))
+    return
+  }
+
   const current = await loadGlobalConfig()
 
   const plannerInfo = getPlannerInfo()

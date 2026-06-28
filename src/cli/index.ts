@@ -15,6 +15,7 @@ import { providersCommand } from "../commands/providers.js"
 import { commitCommand } from "../commands/commit.js"
 import { diffCommand } from "../commands/diff.js"
 import { rollbackCommand } from "../commands/rollback.js"
+import { chatCommand } from "../commands/chat.js"
 
 const program = new Command()
 
@@ -46,5 +47,7 @@ program.command("commit").description("Commit changes").action(commitCommand)
 program.command("diff").description("Show uncommitted changes").action(diffCommand)
 
 program.command("rollback").description("Rollback uncommitted changes").action(rollbackCommand)
+
+program.command("chat").description("Chat with your configured AI provider").action(chatCommand)
 
 program.parse(process.argv)

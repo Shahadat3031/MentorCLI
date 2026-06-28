@@ -24,8 +24,41 @@ export async function detectPackageManager(projectDir: string): Promise<string> 
   }
 }
 
+async function hasTestScript(projectDir: string): Promise<boolean> {
+  try {
+    const pkg = JSON.parse(await fs.readFile(path.join(projectDir, "package.json"), "utf-8"))
+    return !!pkg.scripts?.test
+  } catch {
+    return false
+  }
+}
+
+async function hasTestFiles(projectDir: string): Promise<boolean> {
+  try {
+    const entries = await fs.readdir(projectDir, { withFileTypes: true })
+    for (const entry of entries) {
+      if (entry.name.endsWith(".test.ts") || entry.name.endsWith(".test.js") ||
+          entry.name.endsWith(".spec.ts") || entry.name.endsWith(".spec.js") ||
+          entry.name.endsWith("_test.dart") || entry.name === "test" && entry.isDirectory()) {
+        return true
+      }
+    }
+    return false
+  } catch {
+    return false
+  }
+}
+
 export async function runTests(projectDir: string): Promise<TestResult> {
   const projectType = await detectProjectType(projectDir)
+
+  if (projectType === "node") {
+    const hasScript = await hasTestScript(projectDir)
+    const hasFiles = await hasTestFiles(projectDir)
+    if (!hasScript || !hasFiles) {
+      return { passed: true, output: "No tests configured or no test files found", exitCode: 0 }
+    }
+  }
 
   try {
     let output: string

@@ -10,7 +10,7 @@ export class OllamaExecutor implements ExecutorProvider {
   private baseUrl: string
   private model: string
 
-  constructor(model = "qwen2.5-coder", baseUrl = "http://localhost:11434") {
+  constructor(model = "llama3.2", baseUrl = "http://localhost:11434") {
     this.model = model
     this.baseUrl = baseUrl
   }

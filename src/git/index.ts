@@ -18,6 +18,14 @@ export class GitEngine {
     }
   }
 
+  async initIfNeeded(): Promise<void> {
+    if (await this.isRepo()) return
+    await fs.mkdir(this.repoDir, { recursive: true })
+    execSync("git init", { cwd: this.repoDir, encoding: "utf-8", stdio: "pipe" })
+    execSync('git config user.email "mentor@cli.local"', { cwd: this.repoDir, stdio: "pipe" })
+    execSync('git config user.name "MentorCLI"', { cwd: this.repoDir, stdio: "pipe" })
+  }
+
   status(): string {
     return execSync("git status", { cwd: this.repoDir, encoding: "utf-8" })
   }

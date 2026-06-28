@@ -9,8 +9,9 @@ export function getReviewerInfo(): Record<string, ProviderInfo> {
   return {
     openai: { name: "OpenAI", description: "OpenAI GPT-4.1" },
     openrouter: { name: "OpenRouter", description: "OpenRouter AI (multiple models)" },
-    groq: { name: "Groq", description: "Groq cloud inference" },
-    ollama: { name: "Ollama", description: "Local Ollama models" },
+    groq: { name: "Groq", description: "Groq cloud inference — free tier" },
+    gemini: { name: "Gemini", description: "Google Gemini Flash — free tier" },
+    ollama: { name: "Ollama", description: "Local Ollama models — completely free" },
     mock: { name: "Mock", description: "Mock reviewer for testing" },
   }
 }

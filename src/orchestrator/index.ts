@@ -1,10 +1,11 @@
+import path from "path"
 import chalk from "chalk"
 import { ProviderRegistry } from "../providers/registry.js"
 import { runTests, detectProjectType } from "../tests/index.js"
 import { GitEngine } from "../git/index.js"
 import { saveSession, loadSession, generateSessionId } from "../sessions/index.js"
 import { SessionState, Task, TestResult } from "../types/index.js"
-import { MAX_AGENT_TURNS, MAX_FIX_ATTEMPTS } from "../config/index.js"
+import { MAX_FIX_ATTEMPTS } from "../config/index.js"
 
 export class Orchestrator {
   private registry: ProviderRegistry
@@ -18,6 +19,8 @@ export class Orchestrator {
   }
 
   async build(prd: string): Promise<SessionState> {
+    await this.git.initIfNeeded()
+
     const projectType = await detectProjectType(this.projectDir)
     console.log(chalk.cyan(`Project type: ${projectType}`))
 
@@ -56,7 +59,6 @@ export class Orchestrator {
 
       console.log(chalk.green(`\n=== Executing: ${task.name} ===`))
       const result = await this.executeTask(session, task)
-      session.completedTasks.push(task.name)
       session.summary = result.summary || session.summary
       await saveSession(session)
     }
@@ -72,82 +74,71 @@ export class Orchestrator {
     const executor = this.registry.getExecutor()
     const reviewer = this.registry.getReviewer()
 
+    // Step 1: Write code
     const projectFiles = await this.scanProjectFiles()
+    const execResult = await executor.execute(task, session.prd, session.projectType, projectFiles)
+    const summary = execResult.summary
+    console.log(chalk.gray(`  ${summary}`))
 
-    let summary = ""
-    let attempts = 0
+    // Step 2: Test
+    console.log(chalk.yellow("\n=== Testing ==="))
+    let testResult = await runTests(this.projectDir)
+    this.printTestResult(testResult)
 
-    while (attempts < MAX_AGENT_TURNS) {
-      attempts++
-      session.agentTurns = attempts
-      await saveSession(session)
+    // Step 3: Fix test failures
+    if (!testResult.passed) {
+      console.log(chalk.yellow("\n=== Fixing Test Issues ==="))
+      let fixAttempts = 0
+      while (fixAttempts < MAX_FIX_ATTEMPTS && !testResult.passed) {
+        fixAttempts++
+        session.fixAttempts = fixAttempts
+        await saveSession(session)
 
-      console.log(chalk.green(`  Attempt ${attempts}/${MAX_AGENT_TURNS}`))
+        console.log(chalk.yellow(`  Fix attempt ${fixAttempts}/${MAX_FIX_ATTEMPTS}`))
+        const issues = this.parseTestErrors(testResult.output)
+        const currentFiles = await this.scanProjectFiles()
+        await executor.fix(task, session.prd, issues, currentFiles)
 
-      const execResult = await executor.execute(task, session.prd, session.projectType, projectFiles)
-      summary = execResult.summary
-
-      console.log(chalk.gray(`  ${execResult.summary}`))
-
-      console.log(chalk.yellow("\n=== Testing ==="))
-      const testResult = await runTests(this.projectDir)
-      this.printTestResult(testResult)
+        testResult = await runTests(this.projectDir)
+        this.printTestResult(testResult)
+      }
 
       if (!testResult.passed) {
-        console.log(chalk.yellow("\n=== Fixing Issues ==="))
-        let fixAttempts = 0
-        while (fixAttempts < MAX_FIX_ATTEMPTS) {
-          fixAttempts++
-          session.fixAttempts = fixAttempts
-          await saveSession(session)
-
-          console.log(chalk.yellow(`  Fix attempt ${fixAttempts}/${MAX_FIX_ATTEMPTS}`))
-
-          const issues = this.parseTestErrors(testResult.output)
-          await executor.fix(task, session.prd, issues, projectFiles)
-
-          const retestResult = await runTests(this.projectDir)
-          this.printTestResult(retestResult)
-
-          if (retestResult.passed) {
-            testResult.passed = true
-            break
-          }
-        }
-
-        if (!testResult.passed) {
-          session.failedTasks.push(task.name)
-          console.log(chalk.red(`  Failed to fix ${task.name}`))
-          return { summary }
-        }
-      }
-
-      console.log(chalk.magenta("\n=== Reviewing ==="))
-      const reviewResult = await reviewer.review(
-        task.description,
-        execResult.code || "",
-        testResult.output
-      )
-
-      if (reviewResult.passed) {
-        console.log(chalk.green(`  Review passed (score: ${reviewResult.score})`))
-        if (reviewResult.commitMessage) {
-          console.log(chalk.cyan("\n=== Committing ==="))
-          try {
-            this.git.commit(reviewResult.commitMessage)
-            console.log(chalk.green(`  Committed: ${reviewResult.commitMessage}`))
-          } catch (e) {
-            console.log(chalk.yellow(`  Git commit skipped: ${e instanceof Error ? e.message : String(e)}`))
-          }
-        }
+        session.failedTasks.push(task.name)
+        console.log(chalk.red(`  Could not fix test failures for: ${task.name}`))
         return { summary }
       }
-
-      console.log(chalk.yellow(`  Review failed: ${reviewResult.issues.join(", ")}`))
     }
 
-    session.failedTasks.push(task.name)
-    console.log(chalk.red(`  Exceeded max turns for ${task.name}`))
+    // Step 4: Review
+    console.log(chalk.magenta("\n=== Reviewing ==="))
+    const code = execResult.code || (await this.readChangedFiles(execResult.changedFiles))
+    const reviewResult = await reviewer.review(task.description, code, testResult.output)
+    console.log(chalk.cyan(`  Score: ${reviewResult.score}`))
+
+    // Step 5: Fix review issues
+    if (!reviewResult.passed && reviewResult.issues.length > 0) {
+      console.log(chalk.yellow(`  Issues: ${reviewResult.issues.join(", ")}`))
+      console.log(chalk.yellow("\n=== Fixing Review Issues ==="))
+      const currentFiles = await this.scanProjectFiles()
+      await executor.fix(task, session.prd, reviewResult.issues, currentFiles)
+      console.log(chalk.green("  Review issues fixed"))
+    } else {
+      console.log(chalk.green("  Review passed"))
+    }
+
+    // Step 6: Commit
+    const commitMessage = reviewResult.commitMessage || `feat: implement ${task.name}`
+    console.log(chalk.cyan("\n=== Committing ==="))
+    try {
+      this.git.commit(commitMessage)
+      console.log(chalk.green(`  Committed: ${commitMessage}`))
+    } catch (e) {
+      console.log(chalk.yellow(`  Git commit skipped: ${e instanceof Error ? e.message : String(e)}`))
+    }
+
+    session.completedTasks.push(task.name)
+    await saveSession(session)
     return { summary }
   }
 
@@ -170,7 +161,6 @@ export class Orchestrator {
 
       console.log(chalk.green(`\n=== Executing: ${task.name} ===`))
       const result = await this.executeTask(session, task)
-      session.completedTasks.push(task.name)
       session.summary = result.summary || session.summary
       await saveSession(session)
     }
@@ -186,12 +176,27 @@ export class Orchestrator {
     try {
       const { execSync } = await import("child_process")
       return execSync(
-        "find src lib app -type f -maxdepth 4 2>/dev/null | head -25 | xargs -I{} sh -c 'echo \"=== {} ===\" && cat {}'",
+        "find . -type f -maxdepth 4 ! -path './.git/*' ! -path './node_modules/*' ! -path './dist/*' 2>/dev/null | head -40 | xargs -I{} sh -c 'echo \"=== {} ===\" && cat {}'",
         { cwd: this.projectDir, encoding: "utf-8", timeout: 5000 }
       )
     } catch {
       return ""
     }
+  }
+
+  private async readChangedFiles(filePaths: string[]): Promise<string> {
+    const { readFile } = await import("fs/promises")
+    const parts: string[] = []
+    for (const relPath of filePaths) {
+      try {
+        const abs = path.join(this.projectDir, relPath)
+        const content = await readFile(abs, "utf-8")
+        parts.push(`=== ${relPath} ===\n${content}`)
+      } catch {
+        // file may not exist yet
+      }
+    }
+    return parts.join("\n\n")
   }
 
   private parseTestErrors(output: string): string[] {

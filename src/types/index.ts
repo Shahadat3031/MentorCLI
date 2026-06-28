@@ -41,6 +41,11 @@ export interface SessionState {
   summary: string
 }
 
+export interface ChatMessage {
+  role: "user" | "assistant" | "system"
+  content: string
+}
+
 export interface MentorConfig {
   planner: string
   executor: string
