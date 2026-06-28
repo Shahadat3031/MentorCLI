@@ -1,5 +1,10 @@
 #!/usr/bin/env node
+import dotenv from "dotenv"
+import path from "path"
+import os from "os"
 import { Command } from "commander"
+
+dotenv.config({ path: path.join(os.homedir(), ".mentor", ".env") })
 import { initCommand } from "../commands/init.js"
 import { loginCommand } from "../commands/login.js"
 import { configCommand } from "../commands/config.js"
