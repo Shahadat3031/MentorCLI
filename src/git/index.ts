@@ -1,45 +1,54 @@
-import simpleGit from "simple-git"
+import { execSync } from "child_process"
+import fs from "fs/promises"
 import path from "path"
 
-class GitManager {
-  private git
+export class GitEngine {
+  private repoDir: string
 
-  constructor() {
-    this.git = simpleGit(process.cwd())
-  }
-
-  async status(): Promise<string> {
-    const status = await this.git.status()
-    return JSON.stringify(status, null, 2)
-  }
-
-  async diff(): Promise<string> {
-    return this.git.diff()
-  }
-
-  async commit(message: string): Promise<string> {
-    await this.git.add(".")
-    const result = await this.git.commit(message)
-    return result.commit
-  }
-
-  async rollback(): Promise<void> {
-    await this.git.checkout(".")
-  }
-
-  async getLastCommitHash(): Promise<string> {
-    const log = await this.git.log({ maxCount: 1 })
-    return log.latest?.hash || ""
+  constructor(repoDir: string = process.cwd()) {
+    this.repoDir = repoDir
   }
 
   async isRepo(): Promise<boolean> {
     try {
-      await this.git.status()
+      execSync("git rev-parse --git-dir", { cwd: this.repoDir, encoding: "utf-8", stdio: "pipe" })
       return true
     } catch {
       return false
     }
   }
-}
 
-export const gitManager = new GitManager()
+  status(): string {
+    return execSync("git status", { cwd: this.repoDir, encoding: "utf-8" })
+  }
+
+  diff(): string {
+    return execSync("git diff", { cwd: this.repoDir, encoding: "utf-8" })
+  }
+
+  commit(message: string): string {
+    execSync("git add .", { cwd: this.repoDir, encoding: "utf-8" })
+    execSync(`git commit -m "${message.replace(/"/g, '\\"')}"`, {
+      cwd: this.repoDir,
+      encoding: "utf-8",
+    })
+    return message
+  }
+
+  rollback(): void {
+    execSync("git checkout -- .", { cwd: this.repoDir, encoding: "utf-8" })
+  }
+
+  async getLastCommitHash(): Promise<string> {
+    try {
+      return execSync("git rev-parse HEAD", { cwd: this.repoDir, encoding: "utf-8" }).trim()
+    } catch {
+      return ""
+    }
+  }
+
+  async hasChanges(): Promise<boolean> {
+    const diff = this.diff()
+    return diff.length > 0
+  }
+}

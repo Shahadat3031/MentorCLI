@@ -1,38 +1,35 @@
 import chalk from "chalk"
-import { listSessions, loadSessionState } from "../workflow/index.js"
+import { listSessions, loadSession } from "../sessions/index.js"
 
 export async function statusCommand(): Promise<void> {
   const sessions = await listSessions()
 
   if (sessions.length === 0) {
-    console.log(chalk.yellow("No builds found"))
+    console.log(chalk.yellow("No sessions found"))
     return
   }
 
-  console.log(chalk.cyan("\nBuild Sessions:\n"))
+  console.log(chalk.cyan("\nSessions:\n"))
 
-  for (const buildId of sessions) {
-    const state = await loadSessionState(buildId)
-    if (!state) {
-      console.log(`  ${buildId}: ${chalk.red("corrupted state")}`)
+  for (const id of sessions) {
+    const session = await loadSession(id)
+    if (!session) {
+      console.log(`  ${id}: ${chalk.red("corrupted")}`)
       continue
     }
 
-    const statusColor =
-      state.status === "completed" ? chalk.green :
-      state.status === "failed" ? chalk.red :
-      state.status === "paused" ? chalk.yellow :
+    const color =
+      session.status === "completed" ? chalk.green :
+      session.status === "failed" ? chalk.red :
+      session.status === "paused" ? chalk.yellow :
       chalk.blue
 
-    const moduleInfo = state.currentModule
-      ? ` | Module: ${state.currentModule}`
+    const tasks = `${session.completedTasks.length}/${session.tasks.length} tasks`
+    const current = session.currentTask < session.tasks.length
+      ? ` | current: ${session.tasks[session.currentTask].name}`
       : ""
 
-    const progress = state.completedModules.length > 0
-      ? `\n    Completed: ${state.completedModules.join(", ")}`
-      : ""
-
-    console.log(`  ${buildId}: ${statusColor(state.status)}${moduleInfo}${progress}`)
+    console.log(`  ${id}: ${color(session.status)} (${tasks})${current}`)
   }
 
   console.log("")

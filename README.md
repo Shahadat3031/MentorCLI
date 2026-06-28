@@ -1,12 +1,16 @@
 # MentorCLI
 
-A local AI software delivery pipeline that converts Product Requirement Documents (PRDs) into working software through a deterministic multi-agent workflow.
+A provider-agnostic autonomous software building system.
+
+Turn a PRD into working software through planning, execution, review, testing, fixing, and git commits.
 
 ## Architecture
 
 ```
-PRD → Planner (OpenAI) → Executor (Claude) → Tests → Reviewer (OpenAI) → Fix Loop → Git Commit → Next Module
+PRD → Planner → Executor → Reviewer → Test Engine → Fix Loop → Git Commit
 ```
+
+All providers are pluggable. No hardcoded AI vendors.
 
 ## Installation
 
@@ -14,153 +18,111 @@ PRD → Planner (OpenAI) → Executor (Claude) → Tests → Reviewer (OpenAI) �
 npm install -g mentor-cli
 ```
 
-Or run locally:
+Or from source:
 
 ```bash
 git clone <repo>
 cd mentor-cli
 npm install
 npm run build
+npm link
 ```
 
-## Setup
-
-Initialize the project:
+## Quick Start
 
 ```bash
-mentor init
+mentor init                  # Initialize config
+mentor config                # Choose providers (default: mock)
+mentor login                 # Set API keys
+mentor build prd.md          # Build from PRD
 ```
 
-Configure AI providers:
+## CLI Commands
 
-```bash
-mentor login
+| Command | Description |
+|---------|-------------|
+| `mentor init` | Initialize ~/.mentor directory |
+| `mentor login` | Set API keys for providers |
+| `mentor config` | Configure active providers |
+| `mentor build <prd-file>` | Build software from PRD |
+| `mentor status` | Show session status |
+| `mentor resume` | Resume a paused session |
+| `mentor providers` | List available providers |
+| `mentor commit` | Commit changes |
+| `mentor diff` | Show uncommitted changes |
+| `mentor rollback` | Rollback uncommitted changes |
+
+## Providers
+
+### Planners
+- **openrouter** - OpenRouter AI (any model)
+- **groq** - Groq cloud inference
+- **gemini** - Google Gemini
+- **ollama** - Local Ollama models
+- **mock** - Mock for testing
+
+### Executors
+- **opencode** - OpenCode AI coding agent (spawns `opencode`)
+- **ollama** - Local models (qwen2.5-coder, deepseek-coder, codellama)
+- **shell** - Shell command executor
+- **mock** - Mock for testing
+
+### Reviewers
+- **openrouter** - OpenRouter AI
+- **groq** - Groq cloud inference
+- **ollama** - Local Ollama models
+- **mock** - Mock for testing
+
+## Configuration
+
+Global config at `~/.mentor/config.json`:
+
+```json
+{
+  "planner": "openrouter",
+  "executor": "opencode",
+  "reviewer": "groq"
+}
 ```
 
-You need API keys for:
-- **OpenAI** (Planner agent - PRD parsing, planning, review, consultation)
-- **Anthropic Claude** (Executor agent - code implementation)
+API keys stored in `~/.mentor/.env`.
 
-## Usage
+## Session System
 
-### Login
+Build sessions are stored at `~/.mentor/sessions/`. Each session tracks:
+- PRD content
+- Task list
+- Progress (completed/failed tasks)
+- Agent turns and fix attempts
+- Status (running/paused/completed/failed)
 
-```bash
-mentor login
-```
+## Loop Protection
 
-Follow the prompts to enter your OpenAI and/or Anthropic API keys. Keys are validated with a live API test before saving.
+- MAX_AGENT_TURNS = 6
+- MAX_FIX_ATTEMPTS = 5
 
-### Check connection status
+Prevents infinite loops during execution.
 
-```bash
-mentor whoami
-```
+## Test Engine
 
-### Build from PRD
-
-```bash
-mentor build prd.md
-```
-
-The system will:
-1. Parse the PRD
-2. Plan modules
-3. Execute each module using Claude
-4. Run tests
-5. Review output
-6. Fix failures
-7. Commit successful modules
-8. Move to next module
-
-### View build status
-
-```bash
-mentor status
-```
-
-### Resume paused build
-
-```bash
-mentor resume
-```
-
-### View changes
-
-```bash
-mentor diff
-```
-
-### Manual commit
-
-```bash
-mentor commit
-```
-
-### Rollback changes
-
-```bash
-mentor rollback
-```
-
-### View logs
-
-```bash
-mentor logs
-```
-
-### Logout
-
-```bash
-mentor logout
-```
-
-## Supported Project Types
-
-- **Node.js** (detected via `package.json`)
-- **Flutter** (detected via `pubspec.yaml`)
-
-## Workflow
-
-The build pipeline uses LangGraph with the following nodes:
-
-1. `parse_prd` - Parse PRD
-2. `plan_modules` - Create execution roadmap
-3. `execute_module` - Implement module
-4. `consult_planner` - Get architectural guidance
-5. `ask_human` - Escalate to human
-6. `run_tests` - Execute test suite
-7. `review_module` - Review implementation
-8. `fix_issues` - Fix failures
-9. `commit_changes` - Commit successful code
-
-## Retry Policy
-
-| Limit | Value |
-|-------|-------|
-| Max fix attempts | 5 |
-| Max test retries | 3 |
-| Max review retries | 3 |
-| Max planner escalations | 2 |
+Auto-detects project type and package manager:
+- Node.js: npm / pnpm / yarn (runs `{pm} test`)
+- Flutter: (runs `flutter test`)
 
 ## Project Structure
 
 ```
-mentor-cli/
-├── src/
-│   ├── cli/          # CLI entry point
-│   ├── commands/     # Command implementations
-│   ├── workflow/     # LangGraph workflow engine
-│   ├── agents/       # AI agents (Planner, Executor)
-│   ├── tools/        # Reusable tools
-│   ├── git/          # Git operations
-│   ├── auth/         # Authentication
-│   ├── memory/       # Decision memory
-│   ├── logs/         # Logging system
-│   ├── schemas/      # Zod validation schemas
-│   ├── types/        # TypeScript types
-│   ├── config/       # Configuration
-│   └── project/      # Project detection
-├── tests/            # Test files
-└── docs/             # Documentation
+src/
+├── cli/               # CLI entry point
+├── commands/          # Command implementations
+├── providers/         # Provider interfaces + implementations
+│   ├── planner/       # Planner providers
+│   ├── executor/      # Executor providers
+│   └── reviewer/      # Reviewer providers
+├── orchestrator/      # Build orchestrator
+├── git/               # Git operations
+├── tests/             # Test engine
+├── sessions/          # Session management
+├── config/            # Configuration
+└── types/             # TypeScript types
 ```

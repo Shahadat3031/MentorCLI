@@ -1,40 +1,24 @@
-import { describe, it, expect, vi } from "vitest"
+import { describe, it, expect } from "vitest"
 
-vi.mock("simple-git", () => {
-  const mockGit = {
-    status: vi.fn().mockResolvedValue({ current: "master", files: [] }),
-    diff: vi.fn().mockResolvedValue("diff content"),
-    add: vi.fn().mockResolvedValue(undefined),
-    commit: vi.fn().mockResolvedValue({ commit: "abc123" }),
-    checkout: vi.fn().mockResolvedValue(undefined),
-    log: vi.fn().mockResolvedValue({ latest: { hash: "abc123" } }),
-  }
-  return {
-    default: vi.fn(() => mockGit),
-  }
-})
-
-describe("GitManager", () => {
-  it("returns status", async () => {
-    const { gitManager } = await import("../src/git/index.js")
-    const status = await gitManager.status()
-    expect(status).toBeTruthy()
+describe("GitEngine", () => {
+  it("detects git repo", async () => {
+    const { GitEngine } = await import("../src/git/index.js")
+    const git = new GitEngine(process.cwd())
+    const isRepo = await git.isRepo()
+    expect(isRepo).toBe(true)
   })
 
   it("returns diff", async () => {
-    const { gitManager } = await import("../src/git/index.js")
-    const diff = await gitManager.diff()
-    expect(diff).toBe("diff content")
+    const { GitEngine } = await import("../src/git/index.js")
+    const git = new GitEngine(process.cwd())
+    const diff = git.diff()
+    expect(typeof diff).toBe("string")
   })
 
-  it("commits changes", async () => {
-    const { gitManager } = await import("../src/git/index.js")
-    const hash = await gitManager.commit("test message")
-    expect(hash).toBe("abc123")
-  })
-
-  it("rolls back changes", async () => {
-    const { gitManager } = await import("../src/git/index.js")
-    await expect(gitManager.rollback()).resolves.toBeUndefined()
+  it("returns status", async () => {
+    const { GitEngine } = await import("../src/git/index.js")
+    const git = new GitEngine(process.cwd())
+    const status = git.status()
+    expect(status).toContain("On branch")
   })
 })

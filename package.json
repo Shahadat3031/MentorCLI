@@ -1,7 +1,7 @@
 {
   "name": "mentor-cli",
   "version": "0.1.0",
-  "description": "A local AI software delivery pipeline that converts PRDs into working software",
+  "description": "Provider-agnostic autonomous software building system",
   "type": "module",
   "bin": {
     "mentor": "./dist/cli/index.js"
@@ -16,15 +16,10 @@
     "typecheck": "tsc --noEmit"
   },
   "dependencies": {
-    "@anthropic-ai/sdk": "^0.32.0",
-    "@langchain/langgraph": "^1.4.7",
     "chalk": "^5.3.0",
     "commander": "^12.1.0",
     "dotenv": "^16.4.5",
     "inquirer": "^10.2.0",
-    "openai": "^4.67.0",
-    "ora": "^8.1.0",
-    "simple-git": "^3.27.0",
     "zod": "^3.23.8"
   },
   "devDependencies": {

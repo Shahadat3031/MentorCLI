@@ -1,33 +1,38 @@
 import chalk from "chalk"
 import inquirer from "inquirer"
-import { gitManager } from "../git/index.js"
+import { GitEngine } from "../git/index.js"
 
 export async function commitCommand(): Promise<void> {
+  const git = new GitEngine()
+  const isRepo = await git.isRepo()
+
+  if (!isRepo) {
+    console.log(chalk.yellow("Not a git repository"))
+    return
+  }
+
+  const hasChanges = await git.hasChanges()
+  if (!hasChanges) {
+    console.log(chalk.yellow("No changes to commit"))
+    return
+  }
+
+  console.log(chalk.cyan("\nChanges:\n"))
+  console.log(git.diff())
+
+  const { message } = await inquirer.prompt([
+    {
+      type: "input",
+      name: "message",
+      message: "Commit message:",
+      default: "chore: update",
+    },
+  ])
+
   try {
-    const isRepo = await gitManager.isRepo()
-    if (!isRepo) {
-      console.log(chalk.yellow("Not a git repository"))
-      return
-    }
-
-    const diff = await gitManager.diff()
-    if (!diff) {
-      console.log(chalk.yellow("No changes to commit"))
-      return
-    }
-
-    const { message } = await inquirer.prompt([
-      {
-        type: "input",
-        name: "message",
-        message: "Commit message:",
-        default: "chore: update changes",
-      },
-    ])
-
-    const hash = await gitManager.commit(message)
-    console.log(chalk.green(`✓ Committed: ${hash}`))
+    git.commit(message)
+    console.log(chalk.green(`✓ Committed: ${message}`))
   } catch (e) {
-    console.log(chalk.red(`Error: ${e instanceof Error ? e.message : String(e)}`))
+    console.log(chalk.red(`Commit failed: ${e instanceof Error ? e.message : String(e)}`))
   }
 }

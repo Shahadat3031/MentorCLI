@@ -1,76 +1,53 @@
-export type ProjectType = "flutter" | "node"
+export type ProjectType = "node" | "flutter"
 
 export type BuildStatus = "running" | "paused" | "failed" | "completed"
 
-export type Provider = "openai" | "anthropic"
-
-export interface AuthCredentials {
-  apiKey: string
-}
-
-export interface AuthConfig {
-  openai?: AuthCredentials
-  anthropic?: AuthCredentials
-}
-
-export interface Module {
+export interface Task {
   name: string
+  description: string
   dependencies: string[]
 }
 
-export interface ReviewOutput {
-  passed: boolean
-  issues: string[]
-  confidence: number
-}
-
-export interface ConsultationOutput {
-  resolved: boolean
-  confidence: number
-  needsHuman: boolean
-  question: string | null
-  answer: string | null
-}
-
-export interface HumanDecision {
-  question: string
-  answer: string
-}
-
-export interface BuildState {
-  buildId: string
-  prd: string
-  projectType: ProjectType
-  modules: Module[]
-  currentModule: string | null
-  currentNode: string
-  completedModules: string[]
-  pendingModules: string[]
-  generatedFiles: string[]
-  testOutput: string
-  reviewOutput: ReviewOutput | null
-  consultationOutput: ConsultationOutput | null
-  humanDecision: HumanDecision | null
-  retries: number
-  reviewRetries: number
-  testRetries: number
-  status: BuildStatus
-}
-
-export interface ProjectConfig {
-  projectType: ProjectType
-}
-
-export interface ExecutorOutput {
+export interface ExecutionResult {
   changedFiles: string[]
   summary: string
-  confidence: number
-  needsConsultation: boolean
-  question: string | null
+  code?: string
 }
 
-export interface ParsedError {
-  type: string
-  file: string
-  message: string
+export interface ReviewResult {
+  passed: boolean
+  issues: string[]
+  score: number
+  commitMessage?: string
+}
+
+export interface TestResult {
+  passed: boolean
+  output: string
+  exitCode: number
+}
+
+export interface SessionState {
+  sessionId: string
+  prd: string
+  tasks: Task[]
+  currentTask: number
+  projectType: ProjectType
+  status: BuildStatus
+  agentTurns: number
+  fixAttempts: number
+  completedTasks: string[]
+  failedTasks: string[]
+  summary: string
+}
+
+export interface MentorConfig {
+  planner: string
+  executor: string
+  reviewer: string
+}
+
+export interface ProviderInfo {
+  name: string
+  description: string
 }

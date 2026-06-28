@@ -1,0 +1,91 @@
+import { PlannerProvider } from "./planner/index.js"
+import { ExecutorProvider } from "./executor/index.js"
+import { ReviewerProvider } from "./reviewer/index.js"
+import { MentorConfig } from "../types/index.js"
+import { loadGlobalConfig } from "../config/index.js"
+
+import { OpenRouterPlanner } from "./planner/openrouter.js"
+import { GroqPlanner } from "./planner/groq.js"
+import { GeminiPlanner } from "./planner/gemini.js"
+import { OllamaPlanner } from "./planner/ollama.js"
+import { MockPlanner } from "./planner/mock.js"
+
+import { OpenCodeExecutor } from "./executor/opencode.js"
+import { OllamaExecutor } from "./executor/ollama.js"
+import { ShellExecutor } from "./executor/shell.js"
+import { MockExecutor } from "./executor/mock.js"
+
+import { OpenRouterReviewer } from "./reviewer/openrouter.js"
+import { GroqReviewer } from "./reviewer/groq.js"
+import { OllamaReviewer } from "./reviewer/ollama.js"
+import { MockReviewer } from "./reviewer/mock.js"
+
+export class ProviderRegistry {
+  private config!: MentorConfig
+  private env: Record<string, string | undefined>
+
+  constructor(env: Record<string, string | undefined> = process.env) {
+    this.env = env
+  }
+
+  async init(): Promise<void> {
+    this.config = await loadGlobalConfig()
+  }
+
+  getPlanner(): PlannerProvider {
+    switch (this.config.planner) {
+      case "openrouter":
+        return new OpenRouterPlanner(this.getKey("OPENROUTER_API_KEY"))
+      case "groq":
+        return new GroqPlanner(this.getKey("GROQ_API_KEY"))
+      case "gemini":
+        return new GeminiPlanner(this.getKey("GEMINI_API_KEY"))
+      case "ollama":
+        return new OllamaPlanner()
+      case "mock":
+        return new MockPlanner()
+      default:
+        throw new Error(`Unknown planner provider: ${this.config.planner}`)
+    }
+  }
+
+  getExecutor(): ExecutorProvider {
+    switch (this.config.executor) {
+      case "opencode":
+        return new OpenCodeExecutor()
+      case "ollama":
+        return new OllamaExecutor()
+      case "shell":
+        return new ShellExecutor()
+      case "mock":
+        return new MockExecutor()
+      default:
+        throw new Error(`Unknown executor provider: ${this.config.executor}`)
+    }
+  }
+
+  getReviewer(): ReviewerProvider {
+    switch (this.config.reviewer) {
+      case "openrouter":
+        return new OpenRouterReviewer(this.getKey("OPENROUTER_API_KEY"))
+      case "groq":
+        return new GroqReviewer(this.getKey("GROQ_API_KEY"))
+      case "ollama":
+        return new OllamaReviewer()
+      case "mock":
+        return new MockReviewer()
+      default:
+        throw new Error(`Unknown reviewer provider: ${this.config.reviewer}`)
+    }
+  }
+
+  getConfig(): MentorConfig {
+    return this.config
+  }
+
+  private getKey(name: string): string {
+    const value = this.env[name]
+    if (!value) throw new Error(`Missing ${name} environment variable`)
+    return value
+  }
+}
