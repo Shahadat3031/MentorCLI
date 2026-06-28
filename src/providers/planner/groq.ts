@@ -1,5 +1,6 @@
 import { PlannerProvider } from "./index.js"
 import { Task } from "../../types/index.js"
+import { extractJson } from "../../utils/index.js"
 
 interface GroqResponse {
   choices: { message: { content: string } }[]
@@ -51,7 +52,7 @@ Rules:
     const content = data.choices[0]?.message?.content
     if (!content) throw new Error("Empty Groq response")
 
-    const parsed = JSON.parse(content)
+    const parsed = JSON.parse(extractJson(content))
     return parsed.tasks as Task[]
   }
 }

@@ -1,5 +1,6 @@
 import { ReviewerProvider } from "./index.js"
 import { ReviewResult } from "../../types/index.js"
+import { extractJson } from "../../utils/index.js"
 
 interface OpenRouterResponse {
   choices: { message: { content: string } }[]
@@ -50,6 +51,6 @@ If passed is false, list issues to fix.`,
     const content = data.choices[0]?.message?.content
     if (!content) throw new Error("Empty OpenRouter response")
 
-    return JSON.parse(content) as ReviewResult
+    return JSON.parse(extractJson(content)) as ReviewResult
   }
 }

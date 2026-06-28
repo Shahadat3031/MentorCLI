@@ -1,5 +1,6 @@
 import { ReviewerProvider } from "./index.js"
 import { ReviewResult } from "../../types/index.js"
+import { extractJson } from "../../utils/index.js"
 
 interface GroqResponse {
   choices: { message: { content: string } }[]
@@ -47,6 +48,6 @@ Return JSON: { passed: boolean, issues: string[], score: number (0-1), commitMes
     const content = data.choices[0]?.message?.content
     if (!content) throw new Error("Empty Groq response")
 
-    return JSON.parse(content) as ReviewResult
+    return JSON.parse(extractJson(content)) as ReviewResult
   }
 }
