@@ -36,6 +36,7 @@ async function setKey(): Promise<void> {
       name: "provider",
       message: "Select provider:",
       choices: [
+        { name: "OpenAI", value: "OPENAI_API_KEY" },
         { name: "OpenRouter", value: "OPENROUTER_API_KEY" },
         { name: "Groq", value: "GROQ_API_KEY" },
         { name: "Gemini", value: "GEMINI_API_KEY" },
@@ -83,6 +84,7 @@ async function removeKey(): Promise<void> {
       name: "provider",
       message: "Select key to remove:",
       choices: [
+        { name: "OpenAI", value: "OPENAI_API_KEY" },
         { name: "OpenRouter", value: "OPENROUTER_API_KEY" },
         { name: "Groq", value: "GROQ_API_KEY" },
         { name: "Gemini", value: "GEMINI_API_KEY" },

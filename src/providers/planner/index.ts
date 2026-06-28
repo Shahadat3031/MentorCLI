@@ -7,6 +7,7 @@ export interface PlannerProvider {
 
 export function getPlannerInfo(): Record<string, ProviderInfo> {
   return {
+    openai: { name: "OpenAI", description: "OpenAI GPT-4.1" },
     openrouter: { name: "OpenRouter", description: "OpenRouter AI (multiple models)" },
     groq: { name: "Groq", description: "Groq cloud inference" },
     gemini: { name: "Gemini", description: "Google Gemini" },

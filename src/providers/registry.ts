@@ -4,6 +4,7 @@ import { ReviewerProvider } from "./reviewer/index.js"
 import { MentorConfig } from "../types/index.js"
 import { loadGlobalConfig } from "../config/index.js"
 
+import { OpenAIPlanner } from "./planner/openai.js"
 import { OpenRouterPlanner } from "./planner/openrouter.js"
 import { GroqPlanner } from "./planner/groq.js"
 import { GeminiPlanner } from "./planner/gemini.js"
@@ -15,6 +16,7 @@ import { OllamaExecutor } from "./executor/ollama.js"
 import { ShellExecutor } from "./executor/shell.js"
 import { MockExecutor } from "./executor/mock.js"
 
+import { OpenAIReviewer } from "./reviewer/openai.js"
 import { OpenRouterReviewer } from "./reviewer/openrouter.js"
 import { GroqReviewer } from "./reviewer/groq.js"
 import { OllamaReviewer } from "./reviewer/ollama.js"
@@ -34,6 +36,8 @@ export class ProviderRegistry {
 
   getPlanner(): PlannerProvider {
     switch (this.config.planner) {
+      case "openai":
+        return new OpenAIPlanner(this.getKey("OPENAI_API_KEY"))
       case "openrouter":
         return new OpenRouterPlanner(this.getKey("OPENROUTER_API_KEY"))
       case "groq":
@@ -66,6 +70,8 @@ export class ProviderRegistry {
 
   getReviewer(): ReviewerProvider {
     switch (this.config.reviewer) {
+      case "openai":
+        return new OpenAIReviewer(this.getKey("OPENAI_API_KEY"))
       case "openrouter":
         return new OpenRouterReviewer(this.getKey("OPENROUTER_API_KEY"))
       case "groq":
